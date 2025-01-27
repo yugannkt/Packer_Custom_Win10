@@ -1,0 +1,73 @@
+{
+  "builders": [
+    {
+      "type": "azure-arm",
+      "client_id": "---ADD_id---",
+      "client_secret": "---ADD_Secret---",
+      "tenant_id": "---ADD_Tenant_if---",
+      "subscription_id": "---ADD_Subs---",
+      "managed_image_resource_group_name": "Custom-Win10",
+      "managed_image_name": "Win10",
+      "os_type": "Windows",
+      "image_publisher": "MicrosoftWindowsDesktop",
+      "image_offer": "Windows-10",
+      "image_sku": "win10-22h2-pro",
+      "communicator": "winrm",
+      "winrm_use_ssl": true,
+      "winrm_insecure": true,
+      "winrm_timeout": "10m",
+      "winrm_username": "packer",
+      "azure_tags": {
+        "dept": "Engineering",
+        "task": "Image deployment"
+      },
+      "build_resource_group_name": "Custom-Win10-Group",
+      "vm_size": "Standard_B1s"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "powershell",
+      "inline": [
+        "# Install PSWindowsUpdate module",
+        "Write-Output 'Installing PSWindowsUpdate module...'",
+        "Install-PackageProvider -Name NuGet -Force",
+        "Install-Module -Name PSWindowsUpdate -Force -Confirm:$false",
+        
+        "# Install Windows updates with elevated privileges",
+        "Write-Output 'Installing Windows Updates...'",
+        "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command Install-WindowsUpdate -AcceptAll -AutoReboot' -Verb RunAs",
+        
+        "# Install Google Chrome",
+        "Write-Output 'Installing Google Chrome...'",
+        "Invoke-WebRequest -Uri 'https://dl.google.com/chrome/install/375.126/chrome_installer.exe' -OutFile 'C:\\Windows\\Temp\\chrome_installer.exe'",
+        "Start-Process 'C:\\Windows\\Temp\\chrome_installer.exe' -ArgumentList '/silent' -NoNewWindow -Wait",
+        "Write-Output 'Google Chrome installation complete.'",
+        
+        "# Install 7-Zip",
+        "Write-Output 'Installing 7-Zip...'",
+        "Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z1900-x64.exe' -OutFile 'C:\\Windows\\Temp\\7z1900-x64.exe'",
+        "Start-Process 'C:\\Windows\\Temp\\7z1900-x64.exe' -ArgumentList '/S' -NoNewWindow -Wait",
+        "Write-Output '7-Zip installation complete.'",
+        
+        "# Perform Sysprep to generalize the image",
+        "Write-Output 'Running Sysprep...'",
+        "while ((Get-Service RdAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "while ((Get-Service WindowsAzureGuestAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit",
+        
+        "# Wait for Sysprep to complete and generalize the image",
+        "while($true) {",
+        "    $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select-Object -ExpandProperty ImageState;",
+        "    if($imageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') {",
+        "        Write-Output $imageState;",
+        "        Start-Sleep -s 10;",
+        "    } else {",
+        "        Write-Output 'Sysprep completed successfully.'",
+        "        break;",
+        "    }",
+        "}"
+      ]
+    }
+  ]
+}
