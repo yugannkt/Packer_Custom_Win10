@@ -62,7 +62,7 @@ The provisioners automate software installation, system updates, and generalizat
 ### Overview of Sysprep
 Sysprep (System Preparation Tool) is a Microsoft tool designed to prepare Windows operating systems for cloning, imaging, or deployment on multiple systems. It ensures that every instance created from the same image is unique by resetting system-specific data and configurations. Sysprep is essential for creating reusable, deployable Windows images.
 
-###Key Functions of Sysprep
+### Key Functions of Sysprep
 1. **Generalizing the Image:**
 Removes all unique information like the security identifier (SID), user account settings, and other system-specific data. This allows the image to be deployed to multiple systems.
 
